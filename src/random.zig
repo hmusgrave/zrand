@@ -33,12 +33,12 @@ pub fn PRNGKey(comptime mix: fn (u128) u128) type {
             return rtn;
         }
 
-        fn random(self: *@This(), comptime n: usize) [n]u128 {
+        pub fn random(self: *@This(), comptime n: usize) [n]u128 {
             defer self.seed +%= n *% self.gamma;
             return @bitCast([n]u128, self.split(n));
         }
 
-        fn random_alloc(self: *@This(), allocator: Allocator, n: usize) ![]u128 {
+        pub fn random_alloc(self: *@This(), allocator: Allocator, n: usize) ![]u128 {
             defer self.seed +%= n *% self.gamma;
             var rtn = try self.split_alloc(allocator, n);
             return @ptrCast([*]u128, rtn.ptr)[0..n];

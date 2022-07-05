@@ -1,45 +1,56 @@
 const std = @import("std");
+const random = @import("random.zig");
 
-const foo = @cImport({
+const crush = @cImport({
     @cInclude("bbattery.h");
-    @cInclude("bitset.h");
+    @cInclude("unif01.h");
 });
 
-fn get_u01(param: ?*anyopaque, state: ?*anyopaque) callconv(.C) f64 {
-    _ = param;
-    _ = state;
-    return 0.0;
+const PT = random.PRNGKey(random.Hashes.aes5);
+
+fn get_u01(_: ?*anyopaque, state: ?*anyopaque) callconv(.C) f64 {
+    if (state) |s| {
+        var key = @intToPtr(*PT, @ptrToInt(s));
+        return key.uniform(1)[0];
+    } else {
+        unreachable;
+    }
 }
 
-fn get_bits(param: ?*anyopaque, state: ?*anyopaque) callconv(.C) c_ulong {
-    _ = param;
-    _ = state;
-    return 0;
+fn get_bits(_: ?*anyopaque, state: ?*anyopaque) callconv(.C) c_ulong {
+    if (state) |s| {
+        var key = @intToPtr(*PT, @ptrToInt(s));
+        return @truncate(c_ulong, key.random(1)[0]);
+    } else {
+        unreachable;
+    }
 }
 
 fn write(state: ?*anyopaque) callconv(.C) void {
-    _ = state;
+    if (state) |s| {
+        var key = @intToPtr(*PT, @ptrToInt(s));
+        std.debug.print("{}", .{key});
+    } else {
+        unreachable;
+    }
 }
 
-test {
-    var state: u8 = 5;
-    var param: u8 = 12;
-    var _name = "foo";
-    var name = [_:0]u8{_name[0], _name[1], _name[2], 0};
-    var bar = foo.unif01_Gen{
+pub fn main() anyerror!void {
+    var state = PT{.seed=42};
+    const _name = "Bad RNG";
+    var name: [_name.len+1:0]u8 = undefined;
+    for (name) |*c,i|
+        c.* = _name[i];
+    var bar = crush.unif01_Gen{
         .state =  &state,
-        .param = &param,
+        .param = null,
         .name = &name,
         .GetU01 = get_u01,
         .GetBits = get_bits,
         .Write = write,
     };
-    _ = bar;
 
-    foo.bbattery_SmallCrush(&bar);
-
-    std.debug.print("\n", .{});
-    std.debug.print("{}\n", .{@TypeOf(foo.bbattery_SmallCrush)});
-    std.debug.print("{}\n", .{@TypeOf(foo.unif01_Gen)});
-    std.debug.print("{}\n", .{foo.unif01_Gen});
+    // crush.bbattery_SmallCrush(&bar);
+    // crush.bbattery_Crush(&bar);
+    crush.bbattery_BigCrush(&bar);
 }

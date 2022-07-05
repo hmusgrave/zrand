@@ -56,13 +56,17 @@ pub fn build(b: *std.build.Builder) !void {
         }
     }
 
-    const crush_tests = b.addTest("src/crush.zig");
+    const crush_tests = b.addExecutable("crush", "src/crush.zig");
+    crush_tests.setTarget(target);
     crush_tests.setBuildMode(mode);
 
     crush_tests.addIncludePath("./src/crush/include");
     crush_tests.addCSourceFiles(sources.items, &[_][]const u8{});
     crush_tests.linkLibC();
 
+    crush_tests.install();
+    const run_cmd = crush_tests.run();
+
     const crush_step = b.step("crush", "Run crush tests");
-    crush_step.dependOn(&crush_tests.step);
+    crush_step.dependOn(&run_cmd.step);
 }
