@@ -37,7 +37,7 @@ fn write(state: ?*anyopaque) callconv(.C) void {
 
 pub fn main() anyerror!void {
     var state = PT{.seed=42};
-    const _name = "Bad RNG";
+    const _name = "Aes5";
     var name: [_name.len+1:0]u8 = undefined;
     for (name) |*c,i|
         c.* = _name[i];
@@ -50,7 +50,7 @@ pub fn main() anyerror!void {
         .Write = write,
     };
 
-    // crush.bbattery_SmallCrush(&bar);
+    crush.bbattery_SmallCrush(&bar);
     // crush.bbattery_Crush(&bar);
-    crush.bbattery_BigCrush(&bar);
+    // crush.bbattery_BigCrush(&bar);
 }
