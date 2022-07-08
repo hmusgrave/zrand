@@ -1,14 +1,10 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const aes = @import("aes.zig");
-
-pub const Hashes = struct {
-    aes5: fn (u128) u128 = aes.aes5,
-    aes10: fn (u128) u128 = aes.aes10,
-}{};
+const mix = @import("mix.zig");
 
 // TODO: Optimize a little, add numeric stability
-pub fn PRNGKey(comptime mix: fn (u128) u128) type {
+pub fn PRNGKey(comptime hash: fn (u128) u128) type {
     return packed struct {
         seed: u64 align(16),
         gamma: u64 = 0x9e3779b97f4a7c15, // closest odd integer to 1<<64 / phi
@@ -16,8 +12,8 @@ pub fn PRNGKey(comptime mix: fn (u128) u128) type {
         fn split_fill(self: *@This(), buf: []@This()) void {
             for (buf) |*x, i| {
                 const new_seed: u128 = self.seed +% self.gamma *% i;
-                const new_val = mix((new_seed << 64) + self.gamma);
-                x.* = @bitCast(@This(), mix(new_val));
+                const new_val = hash((new_seed << 64) + self.gamma);
+                x.* = @bitCast(@This(), hash(new_val));
             }
         }
 
@@ -106,7 +102,7 @@ pub fn PRNGKey(comptime mix: fn (u128) u128) type {
 }
 
 test "Weights" {
-    var p = PRNGKey(Hashes.aes5){ .seed = 42 };
+    var p = PRNGKey(mix.aes5){ .seed = 42 };
     var weights = [_]f64{ 1, 5, 25 };
     var random = p.weighted_choice(f64, weights[0..], 100);
     var expected = [_]usize{ 2, 0, 2, 2, 2, 2, 2, 1, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 0, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 1, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 1, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1, 2, 1, 2, 2, 1, 2, 2, 2, 2, 2, 0, 2, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 1 };
@@ -117,7 +113,7 @@ test "Weights" {
 
 test "Deterministic seed and hash yield deterministic PRNG" {
     const allocator = std.testing.allocator;
-    var p = PRNGKey(Hashes.aes5){ .seed = 42 };
+    var p = PRNGKey(mix.aes5){ .seed = 42 };
     var keys = try p.split_alloc(allocator, 3);
     defer allocator.free(keys);
     const a = try keys[0].uniform_alloc(allocator, 2);
