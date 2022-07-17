@@ -1,7 +1,7 @@
 const std = @import("std");
-const aes = @import("./aes.zig");
+const aes = @import("./mix/aes.zig");
 const random = @import("./random.zig");
-const z = @import("./to_float.zig");
+const discrete = @import("./discrete.zig");
 
 test {
     std.testing.refAllDecls(@This());
